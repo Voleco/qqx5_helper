@@ -1,6 +1,0 @@
-#ifndef NOTEANALYZER_H
-#define NOTEANALYZER_H
-
-
-
-#endif // NOTEANALYZER_H
