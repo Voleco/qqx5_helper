@@ -108,6 +108,8 @@ private:
 
     int mousePressAction;
 
+    std::vector<QImage> stdNotes;
+
 private:
 
     void mousePressEvent(QMouseEvent *e);
@@ -136,6 +138,7 @@ private slots:
     void openFile();
     void saveFile();
     void saveFileAs();
+    void loadStandardNoteImages();
 
 
     void doCaptureX5Window();
@@ -145,6 +148,7 @@ private slots:
     void ostu();
     void doFindNoteNum();
     void doMarkNoteBeginEnd();
+    void doDecodeNotes();
 
     void threshold1Changed(int threshold);
     void threshold2Changed(int threshold);

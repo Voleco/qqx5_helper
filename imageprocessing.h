@@ -16,11 +16,33 @@
 
 typedef int NoteType;
 
-void GetNodesFromBinaryImage(const QImage& src, std::vector<NoteType>& notes);
+static std::ostream& operator <<(std::ostream & out, const NoteType &a)
+{
+    switch (a)
+    {
+    case RIGHT_NOTE:
+        out << "Right";
+        break;
+    case UP_NOTE:
+        out << "Up";
+        break;
+    case LEFT_NOTE:
+        out << "Left";
+        break;
+    case DOWN_NOTE:
+        out << "Down";
+        break;
+    default:
+        break;
+    }
+    return out;
+}
 
-void GetNodeNumFromBinaryImage(const QImage& src, int &num);
+void GetNodeSequenceFromBinaryImage(const QImage& src, const std::vector<QImage>& stdnotes, std::vector<NoteType>& notesequence);
 
-void MarkNodeBeginEndFromBinaryImage(QImage& src);
+int GetNoteNumAndBeginFromBinaryImage(const QImage& src,std::vector<int>& begins);
+
+void MarkNodeBeginEndFromBinaryImage(QImage& src, std::vector<QImage>& notes);
 
 bool IsBlack(int color);
 
@@ -37,4 +59,8 @@ int ostu_tres(const QImage& src);
 void QImageToBinary(QImage& src,int thred);
 
 QImage Clip(const QImage& src, int ymin, int ymax, int xmin, int xmax);
+
+NoteType GuessNote(const QImage& src, int begin, const std::vector<QImage>& stdnotes);
+
+
 #endif // IMAGEPROCESSING_H

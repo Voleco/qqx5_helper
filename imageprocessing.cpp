@@ -298,23 +298,9 @@ QImage Clip(const QImage& src, int ymin, int ymax, int xmin, int xmax)
     return dst;
 }
 
-void GetNodesFromBinaryImage(const QImage& src, std::vector<NoteType>& notes)
+int GetNoteNumAndBeginFromBinaryImage(const QImage& src,std::vector<int>& begins)
 {
-    //I assume src is 325x40 for now
-    notes.resize(0);
-    int num = 0;
-    for(int i=0;i<src.width();i++)
-    {
-        num = 0;
-        for(int j=0;j<src.height();j++)
-            if(IsBlack(src.pixel(i,j)))
-                num++;
-        notes.push_back(num);
-    }
-}
-
-void GetNodeNumFromBinaryImage(const QImage& src, int& num)
-{
+    begins.resize(0);
     std::vector<int> counts;
     int count = 0;
     for(int i=0;i<src.width();i++)
@@ -325,10 +311,11 @@ void GetNodeNumFromBinaryImage(const QImage& src, int& num)
                 count++;
         counts.push_back(count);
     }
-    num = 0;
+    int num = 0;
     int num_error = 0;
     int consecutive_zero = 0;
     int consecutive_nonzero = 0;
+    int begin =0;
     for(unsigned int i=0;i<counts.size();i++)
     {
         if(counts[i]>0)
@@ -339,6 +326,7 @@ void GetNodeNumFromBinaryImage(const QImage& src, int& num)
             {
                 consecutive_zero = 0;
                 consecutive_nonzero = 1;
+                begin = i-1;
             }
         }
         else
@@ -346,7 +334,10 @@ void GetNodeNumFromBinaryImage(const QImage& src, int& num)
             if(consecutive_nonzero>0)
             {
                 if(consecutive_nonzero>22 && consecutive_nonzero<28)
+                {
                     num++;
+                    begins.push_back(begin);
+                }
                 else
                     num_error++;
                 consecutive_zero = 1;
@@ -362,11 +353,13 @@ void GetNodeNumFromBinaryImage(const QImage& src, int& num)
     }
     if(num>9||num<1||num_error>5)
         num = -1;
+    return num;
 }
 
 
-void MarkNodeBeginEndFromBinaryImage(QImage& src)
+void MarkNodeBeginEndFromBinaryImage(QImage& src, std::vector<QImage> &notes)
 {
+    notes.resize(0);
     std::vector<int> counts;
     int count = 0;
     for(int i=0;i<src.width();i++)
@@ -376,7 +369,7 @@ void MarkNodeBeginEndFromBinaryImage(QImage& src)
             if(IsBlack(src.pixel(i,j)))
                 count++;
         counts.push_back(count);
-        qDebug()<<count;
+        //qDebug()<<count;
     }
     int num = 0;
     int num_error = 0;
@@ -401,11 +394,17 @@ void MarkNodeBeginEndFromBinaryImage(QImage& src)
         {
             if(consecutive_nonzero>0)
             {
-                qDebug()<<"conse_non_zero"<<consecutive_nonzero;
+                //qDebug()<<"conse_non_zero"<<consecutive_nonzero;
                 if(consecutive_nonzero>20 && consecutive_nonzero<30)
                 {
                     num++;
                     end = i;
+
+                    QImage note(end-begin,src.height(),src.format());
+                    for(int y=0;y<src.height();y++)
+                        for(int x=0;x<end-begin;x++)
+                            note.setPixel(x,y,src.pixel(x+begin,y));
+                    notes.push_back(note);
                     for(int j=0;j<src.height();j++)
                     {
                         src.setPixel(begin,j,0x00ff0000);
@@ -427,4 +426,59 @@ void MarkNodeBeginEndFromBinaryImage(QImage& src)
     }
     if(num>9||num<1||num_error>5)
         num = -1;
+}
+
+
+NoteType GuessNote(const QImage& src, int begin, const std::vector<QImage>& stdnotes)
+{
+    std::vector<int> scores(stdnotes.size(),0);
+    for(unsigned int i=0;i<stdnotes.size();i++)
+    {
+        //for each candidate note, we compute 3 scores and take the max one
+        int max = 0;
+        int current = 0;
+        for(int offset=-1;offset<2;offset++)
+        {
+            current = 0;
+            for(int y=0;y<stdnotes[i].height();y++)
+            {
+                for(int x=0;x<stdnotes[i].width();x++)
+                {
+                    if(src.pixel(begin+offset+x,y)==stdnotes[i].pixel(x,y))
+                        current++;
+                }
+            }
+            if(current>max)
+                max=current;
+        }
+        scores[i]=max;
+    }
+    int maxScore=0;
+    int index=0;
+    for(unsigned int i=0;i<scores.size();i++)
+    {
+        if(scores[i]>maxScore)
+        {
+            maxScore = scores[i];
+            index = i;
+        }
+    }
+    return index;
+}
+
+void GetNodeSequenceFromBinaryImage(const QImage& src, const std::vector<QImage>& stdnotes, std::vector<NoteType>& notesequence)
+{
+    //I assume src is 325x40 for now
+    notesequence.resize(0);
+    std::vector<int> begins;
+    int num = GetNoteNumAndBeginFromBinaryImage(src,begins);
+    if(num==-1)
+        return;
+
+    NoteType current;
+    for(int i=0;i<num;i++)
+    {
+        current = GuessNote(src, begins[i],stdnotes);
+        notesequence.push_back(current);
+    }
 }

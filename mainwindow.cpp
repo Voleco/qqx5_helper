@@ -72,6 +72,8 @@ void MainWindow::setupMenuBar()
     action = menu->addAction(tr("save as..."));
     connect(action, SIGNAL(triggered()), this, SLOT(saveFileAs()));
 
+    action = menu->addAction(tr("load std notes image"));
+    connect(action, SIGNAL(triggered()), this, SLOT(loadStandardNoteImages()));
 \
 
     menu->addSeparator();
@@ -102,6 +104,9 @@ void MainWindow::setupMenuBar()
 
     action = x5Menu->addAction(tr("mark notes begin end"));
     connect(action, SIGNAL(triggered()), this, SLOT(doMarkNoteBeginEnd()));
+
+    action = x5Menu->addAction(tr("decode the note sequence"));
+    connect(action, SIGNAL(triggered()), this, SLOT(doDecodeNotes()));
 
     //menu for binary image opertions
     QMenu *ChangeImageMenu = menuBar()->addMenu(tr(" Change image "));
@@ -638,18 +643,52 @@ void MainWindow::ostu()
 
 void MainWindow::doFindNoteNum()
 {
-    //std::vector<int> num;
-   // GetNodesFromBinaryImage(changedImage, num);
-    //for(int i=0;i<num.size();i++)
-     //   qDebug()<<num[i];
-    int num;
-    GetNodeNumFromBinaryImage(changedImage,num);
+    std::vector<int> bgs;
+    int num = GetNoteNumAndBeginFromBinaryImage(changedImage,bgs);
     qDebug()<<num;
 }
 
 void MainWindow::doMarkNoteBeginEnd()
 {
-    MarkNodeBeginEndFromBinaryImage(changedImage);
+    std::vector<QImage> notes;
+    MarkNodeBeginEndFromBinaryImage(changedImage,notes);
+    QString filename;
+    std::string strfileName;
+    for(unsigned int i=0;i<notes.size();i++)
+    {
+        strfileName = "D:/tests/" + std::to_string(i) + ".bmp";
+        filename = QString::fromStdString(strfileName);
+        notes[i].save(filename);
+    }
+
     updateImage();
     updateHistogram();
+}
+
+void MainWindow::loadStandardNoteImages()
+{
+    QImage stdNoteLeft;
+    QImage stdNoteRight;
+    QImage stdNoteUp;
+    QImage stdNoteDown;
+    QString prefix = QDir::currentPath()+"/stdnotes/";
+    stdNoteLeft = QImage(prefix+"left.bmp");
+    stdNoteRight = QImage(prefix+"right.bmp");
+    stdNoteUp = QImage(prefix+"up.bmp");
+    stdNoteDown = QImage(prefix+"down.bmp");
+
+    //changedImage = QImage(stdNoteLeft);
+    stdNotes.push_back(stdNoteRight);
+    stdNotes.push_back(stdNoteUp);
+    stdNotes.push_back(stdNoteLeft);
+    stdNotes.push_back(stdNoteDown);
+}
+
+void MainWindow::doDecodeNotes()
+{
+    std::vector<NoteType> noteSeq;
+    GetNodeSequenceFromBinaryImage(changedImage, stdNotes, noteSeq);
+    for(unsigned int i=0;i<noteSeq.size();i++)
+        qDebug()<<noteSeq[i];
+
 }
