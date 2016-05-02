@@ -475,6 +475,9 @@ void GetNodeSequenceFromBinaryImage(const QImage& src, const std::vector<QImage>
     if(num==-1)
         return;
 
+    //in this case, it is probably the case that the sequence we recieve is incomplete
+    if((325-begins[begins.size()-1])-(begins[0]-0)>50)
+        return;
     NoteType current;
     for(int i=0;i<num;i++)
     {

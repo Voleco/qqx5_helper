@@ -9,10 +9,10 @@
 #define MYWHITE  0xffffffff
 #define MYBLACK  0xff000000
 
-#define RIGHT_NOTE 0
-#define UP_NOTE 1
-#define LEFT_NOTE 2
-#define DOWN_NOTE 3
+#define NOTE_RIGHT 0
+#define NOTE_UP 1
+#define NOTE_LEFT 2
+#define NOTE_DOWN 3
 
 typedef int NoteType;
 
@@ -20,16 +20,16 @@ static std::ostream& operator <<(std::ostream & out, const NoteType &a)
 {
     switch (a)
     {
-    case RIGHT_NOTE:
+    case NOTE_RIGHT:
         out << "Right";
         break;
-    case UP_NOTE:
+    case NOTE_UP:
         out << "Up";
         break;
-    case LEFT_NOTE:
+    case NOTE_LEFT:
         out << "Left";
         break;
-    case DOWN_NOTE:
+    case NOTE_DOWN:
         out << "Down";
         break;
     default:
@@ -38,6 +38,7 @@ static std::ostream& operator <<(std::ostream & out, const NoteType &a)
     return out;
 }
 
+//if the image is not a screen of notes, the function will return FALSE indicating that it fails to do the decoding
 void GetNodeSequenceFromBinaryImage(const QImage& src, const std::vector<QImage>& stdnotes, std::vector<NoteType>& notesequence);
 
 int GetNoteNumAndBeginFromBinaryImage(const QImage& src,std::vector<int>& begins);

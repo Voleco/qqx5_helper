@@ -1,12 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+
 #include <QMainWindow>
 #include <QDialog>
 #include <QWidget>
 #include <QDesktopWidget>
 #include <QSignalMapper>
 #include <QDockWidget>
+#include <QScreen>
 #include <QTextEdit>
 #include <QScrollArea>
 #include <QLabel>
@@ -39,9 +41,11 @@
 #include <QTextStream>
 #include <vector>
 #include <QTime>
+#include <QTimer>
 
 #include <QMouseEvent>
 
+#include <time.h>
 #include <string>
 
 #include <windows.h>
@@ -49,8 +53,6 @@
 #include <winuser.h>
 #include "imageprocessing.h"
 #include "myutil.h"
-
-
 
 
 
@@ -91,14 +93,8 @@ private:
     QSlider *slider,*slider2;
 
 
-    int up,down,left,right;
-
     //local o-w o+8*w, mean, variance
     double umin,umax,variancemin,variancemax;
-
-
-    int maxBluePointX,maxBluePointY;
-    int noteL,noteR,noteU,noteD;
 
 
     int block_size;
@@ -107,9 +103,17 @@ private:
 
 
     int mousePressAction;
-
+    QTimer *timerJZ;
+    QTimer *timerCT;
     std::vector<QImage> stdNotes;
+    NoteType nextNote;
 
+    std::vector<NoteType> noteSeqBuf;
+
+
+    InterceptionContext context;
+    InterceptionDevice device;
+    InterceptionKeyStroke stroke;
 private:
 
     void mousePressEvent(QMouseEvent *e);
@@ -139,7 +143,7 @@ private slots:
     void saveFile();
     void saveFileAs();
     void loadStandardNoteImages();
-
+    void getKeyBoard();
 
     void doCaptureX5Window();
     void doFindNoteArea(bool checked);
@@ -150,6 +154,15 @@ private slots:
     void doMarkNoteBeginEnd();
     void doDecodeNotes();
 
+    void doTestSendKeyEvent();
+    void doStopSendKeyEvent();
+    void pressAKey();
+
+    void doStartHelperCT1();
+    void doStopHelperCT1();
+    void doHelperCT1();
+
+    void doOneKeyFill();
     void threshold1Changed(int threshold);
     void threshold2Changed(int threshold);
 

@@ -12,6 +12,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = qqx5helper
 TEMPLATE = app
 
+LIBS += "C:/Users/Voleco/Documents/QT2016/library/x86/interception.lib"
 
 SOURCES += main.cpp\
         mainwindow.cpp \

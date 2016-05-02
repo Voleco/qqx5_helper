@@ -13,8 +13,6 @@ MainWindow::MainWindow(  QWidget *parent ) :
     this->setWindowTitle("personal assignment 2");
     threshold1=threshold2=0;
 
-    noteL=noteR=noteU=noteD=0;
-
     block_size = 48;
     block_num = 6;
     edge_size = 8;
@@ -46,10 +44,21 @@ MainWindow::MainWindow(  QWidget *parent ) :
     statusBar()->showMessage(tr("Status Bar"));
     this->resize(900,450);
 
+    timerJZ = new QTimer(this);
+    connect(timerJZ, SIGNAL(timeout()), this, SLOT(pressAKey()));
+
+    timerCT = new QTimer(this);
+    connect(timerCT, SIGNAL(timeout()), this, SLOT(doHelperCT1()));
+
+    raise_process_priority();
+    context = interception_create_context();
+
+
 }
 
 MainWindow::~MainWindow()
 {
+    interception_destroy_context(context);
     delete ui;
 }
 
@@ -75,6 +84,8 @@ void MainWindow::setupMenuBar()
     action = menu->addAction(tr("load std notes image"));
     connect(action, SIGNAL(triggered()), this, SLOT(loadStandardNoteImages()));
 \
+    action = menu->addAction(tr("get keyboard"));
+    connect(action, SIGNAL(triggered()), this, SLOT(getKeyBoard()));
 
     menu->addSeparator();
 
@@ -108,14 +119,32 @@ void MainWindow::setupMenuBar()
     action = x5Menu->addAction(tr("decode the note sequence"));
     connect(action, SIGNAL(triggered()), this, SLOT(doDecodeNotes()));
 
+
+    x5Menu->addSeparator();
+    action = x5Menu->addAction(tr("test sending key event"));
+    connect(action, SIGNAL(triggered()), this, SLOT(doTestSendKeyEvent()));
+
+    action = x5Menu->addAction(tr("test sending key event"));
+    connect(action, SIGNAL(triggered()), this, SLOT(doStopSendKeyEvent()));
     //menu for binary image opertions
     QMenu *ChangeImageMenu = menuBar()->addMenu(tr(" Change image "));
 
     action = ChangeImageMenu->addAction(tr("to origin"));
     connect(action, SIGNAL(triggered()), this, SLOT(changeImageToOrigin()));
 
+    //
+    QMenu *x5HelperMenu = menuBar()->addMenu(tr(" x5 helper "));
 
+    action = x5HelperMenu->addAction(tr("start help CT1"));
+    connect(action, SIGNAL(triggered()), this, SLOT(doStartHelperCT1()));
 
+    action = x5HelperMenu->addAction(tr("stop help CT1"));
+    connect(action, SIGNAL(triggered()), this, SLOT(doStopHelperCT1()));
+
+    x5HelperMenu->addSeparator();
+
+    action = x5HelperMenu->addAction(tr("one key fill"));
+    connect(action, SIGNAL(triggered()), this, SLOT(doOneKeyFill()));
 
 
     dockWidgetMenu = menuBar()->addMenu(tr("&Views"));
@@ -354,8 +383,6 @@ void MainWindow::openFile()
     updateImage();
     updateHistogram();
 
-
-    up = down = left = right =0;
 
 //    allColors.clear();
 //    numberOfPixelInAColor.clear();
@@ -691,4 +718,148 @@ void MainWindow::doDecodeNotes()
     for(unsigned int i=0;i<noteSeq.size();i++)
         qDebug()<<noteSeq[i];
 
+}
+
+void MainWindow::doTestSendKeyEvent()
+{
+nextNote = NOTE_RIGHT;
+    timerJZ->start(1000);
+}
+
+void MainWindow::pressAKey()
+{
+    //qDebug()<<"pressakey called";
+    // Simulate a key press
+    switch (nextNote) {
+    case NOTE_RIGHT:
+      //  qDebug()<<"right";
+        keybd_event(VK_RIGHT, 0,  0, 0);
+        Sleep(20);
+        keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
+        break;
+    case NOTE_UP:
+        //qDebug()<<"up";
+        keybd_event(VK_UP, 0,  0, 0);
+        Sleep(20);
+        keybd_event(VK_UP, 0, KEYEVENTF_KEYUP, 0);
+        break;
+    case NOTE_LEFT:
+        //qDebug()<<"left";
+        keybd_event(VK_LEFT, 0,  0, 0);
+        Sleep(20);
+        keybd_event(VK_LEFT, 0,  KEYEVENTF_KEYUP, 0);
+        break;
+    case NOTE_DOWN:
+        //qDebug()<<"down";
+        keybd_event(VK_DOWN, 0,  0, 0);
+        Sleep(20);
+        keybd_event(VK_DOWN, 0,  KEYEVENTF_KEYUP, 0);
+        break;
+    default:
+        break;
+    }
+
+}
+
+void MainWindow::doStopSendKeyEvent()
+{
+    timerJZ->stop();
+}
+
+
+void MainWindow::doStartHelperCT1()
+{
+    timerCT->start(500);
+}
+
+void MainWindow::doStopHelperCT1()
+{
+    timerCT->stop();
+}
+
+void MainWindow::doHelperCT1()
+{
+
+    noteSeqBuf.resize(0);
+    std::vector<NoteType> noteSeq;
+
+    srand (time(NULL));
+
+    //capture window and take a snapshot
+    LPCWSTR pszThreadName = convertCharArrayToLPCWSTR("QQìÅÎè");
+
+    QPixmap originalPixmap = QPixmap::grabWindow((WId)FindWindowW(NULL, pszThreadName));
+    QImage snapshot = originalPixmap.toImage().copy(0,0,1024,768);
+
+    //clip the snapshot for note zone
+    QImage notezone = Clip(snapshot,458,498,360,685);
+
+    //use ostu algorithm to turn note zone into binary image
+    int thr = ostu_tres(notezone);
+    QImageToBinary(notezone,thr);
+
+    changedImage = QImage(notezone);
+    updateImage();
+    updateHistogram();
+    //decode the note sequence from the binary image
+    GetNodeSequenceFromBinaryImage(notezone, stdNotes, noteSeq);
+
+    if(noteSeq.size()>0 && noteSeq!=noteSeqBuf)
+    {
+        noteSeqBuf = noteSeq;
+
+        for (unsigned int i = 0; i < noteSeqBuf.size(); i++)
+        {
+            PressKey(context,device,stroke,noteSeqBuf[i]);
+            Sleep(50);
+            ReleaseKey(context,device,stroke,noteSeqBuf[i]);
+            Sleep(50);
+        }
+    }
+
+
+
+}
+
+void MainWindow::doOneKeyFill()
+{
+    InterceptionContext context;
+    InterceptionDevice device;
+    InterceptionKeyStroke stroke;
+
+    raise_process_priority();
+    context = interception_create_context();
+
+    interception_set_filter(context, interception_is_keyboard, INTERCEPTION_FILTER_KEY_DOWN | INTERCEPTION_FILTER_KEY_UP);
+
+    if (interception_receive(context, device = interception_wait(context), (InterceptionStroke *)&stroke, 1) > 0)
+    {
+        if (stroke.code == SCANCODE_TAB && stroke.state == INTERCEPTION_KEY_DOWN)
+        {
+            for (unsigned int i = 0; i < noteSeqBuf.size(); i++)
+            {
+                PressKey(context,device,stroke,noteSeqBuf[i]);
+                Sleep(50);
+                ReleaseKey(context,device,stroke,noteSeqBuf[i]);
+                Sleep(50);
+            }
+        }
+
+        //else if (stroke.code == SCANCODE_ESC)
+        //    break;
+        else
+            interception_send(context, device, (InterceptionStroke *)&stroke, 1);
+
+    }
+
+
+    interception_destroy_context(context);
+}
+
+void MainWindow::getKeyBoard()
+{
+    interception_set_filter(context, interception_is_keyboard, INTERCEPTION_FILTER_KEY_DOWN | INTERCEPTION_FILTER_KEY_UP);
+
+    if (interception_receive(context, device = interception_wait(context), (InterceptionStroke *)&stroke, 1) > 0)
+        interception_send(context, device, (InterceptionStroke *)&stroke, 1);
 }
